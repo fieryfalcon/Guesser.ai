@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import HomePage from "./HomePage";
 import RoomPage from "./RoomPage";
+import CreateRoomOrJoinComponent from "./Components/CreateOrJoinRoom";
 
 const App = () => {
   const [currentRoom, setCurrentRoom] = useState(null);
@@ -12,11 +13,7 @@ const App = () => {
 
   return (
     <div>
-      {currentRoom ? (
-        <RoomPage roomId={currentRoom} />
-      ) : (
-        <HomePage joinRoom={joinRoom} />
-      )}
+      <CreateRoomOrJoinComponent />
     </div>
   );
 };
