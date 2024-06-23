@@ -7,6 +7,7 @@ const CreateRoomOrJoinComponent = () => {
   const [messages, setMessages] = useState([]);
   const [message, setMessage] = useState("");
   const [isWaiting, setIsWaiting] = useState(false);
+  const [username, setUsername] = useState("");
 
   useEffect(() => {
     waitroomSocket.on("connect", () => {
@@ -15,13 +16,15 @@ const CreateRoomOrJoinComponent = () => {
       waitroomSocket.on("grouped", (roomId) => {
         console.log(`Grouped into room: ${roomId}`);
         setRoomId(roomId);
-        setIsInRoom(true);
-        // joinChatRoom(roomId);
+        // setIsInRoom(true);
+        joinChatRoom(roomId);
       });
-      chatroomSocket.on("chatMessage", (msg) => {
-        console.log("Received chat message", msg);
-        setMessages((prevMessages) => [...prevMessages, msg]);
+      chatroomSocket.on("chatMessage", (data) => {
+        console.log("Received chat message", data);
+        // const { message, username } = data;
+        setMessages((prevMessages) => [...prevMessages, data]);
       });
+      console.log("Messages", messages);
     });
 
     return () => {
@@ -35,21 +38,20 @@ const CreateRoomOrJoinComponent = () => {
     setIsWaiting(true);
   };
 
-  //   const joinRoom = (roomId) => {
-  //     joinChatRoom(roomId);
-  //   };
-
-  // const joinChatRoom = (roomId) => {
-  //   chatroomSocket.emit("joinRoom", roomId);
-  //   chatroomSocket.on("chatMessage", (msg) => {
-  //     setMessages((prevMessages) => [...prevMessages, msg]);
-  //   });
-  //   setIsInRoom(true);
+  // const joinRoom = (roomId) => {
+  //   joinChatRoom(roomId);
   // };
+
+  const joinChatRoom = (roomId) => {
+    console.log("Joining chat room");
+    chatroomSocket.emit("joinRoom", roomId);
+
+    setIsInRoom(true);
+  };
 
   const sendMessage = () => {
     console.log("Sending message");
-    chatroomSocket.emit("chatMessage", { roomId, message });
+    chatroomSocket.emit("chatMessage", { roomId, message, username });
     setMessage("");
   };
 
@@ -63,6 +65,13 @@ const CreateRoomOrJoinComponent = () => {
         ) : (
           <div>
             <div>
+              <h1>Enter Username</h1>
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+              />
+
               <button onClick={enterWaitlist}>Join Room</button>
             </div>
           </div>
@@ -70,11 +79,15 @@ const CreateRoomOrJoinComponent = () => {
       ) : (
         <div>
           <div>
-            {messages.map((msg, index) => (
-              <div key={index}>
-                {msg.user}: {msg.text}
-              </div>
-            ))}
+            <h1>Chat Room</h1>
+            <div>
+              {messages.map((msg, index) => (
+                <div key={index}>
+                  <span>{msg.username}:</span>
+                  <span>{msg.message}</span>
+                </div>
+              ))}
+            </div>
           </div>
           <input
             type="text"
