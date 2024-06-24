@@ -8,22 +8,36 @@ const CreateRoomOrJoinComponent = () => {
   const [message, setMessage] = useState("");
   const [isWaiting, setIsWaiting] = useState(false);
   const [username, setUsername] = useState("");
+  const [round, setRound] = useState(1);
+  const [questions, setQuestions] = useState([]);
+  const [timer, setTimer] = useState(null);
+  const [remainingTime, setRemainingTime] = useState(10);
+  const [gameOver, setGameOver] = useState(false);
 
   useEffect(() => {
     waitroomSocket.on("connect", () => {
       console.log("Connected to waitroom");
 
-      waitroomSocket.on("grouped", (roomId) => {
-        console.log(`Grouped into room: ${roomId}`);
+      waitroomSocket.on("grouped", (data) => {
+        const { roomId, questions } = data;
         setRoomId(roomId);
-        // setIsInRoom(true);
+        setQuestions(questions);
         joinChatRoom(roomId);
       });
       chatroomSocket.on("chatMessage", (data) => {
-        console.log("Received chat message", data);
-        // const { message, username } = data;
         setMessages((prevMessages) => [...prevMessages, data]);
       });
+      chatroomSocket.on("newRound", (data) => {
+        const { round } = data;
+        setRound(round);
+        startTimer();
+      });
+      chatroomSocket.on("endGame", (data) => {
+        setTimer(null);
+        setGameOver(true);
+        setRound(1);
+      });
+
       console.log("Messages", messages);
     });
 
@@ -33,17 +47,35 @@ const CreateRoomOrJoinComponent = () => {
     };
   }, []);
 
+  useEffect(() => {
+    let intervalId;
+    if (timer) {
+      intervalId = setInterval(() => {
+        setRemainingTime((prevTime) => prevTime - 1);
+      }, 1000);
+    }
+    return () => clearInterval(intervalId);
+  }, [timer]);
+
+  const startTimer = () => {
+    const timerInstance = setTimeout(() => {
+      endRound();
+    }, 10000);
+    setTimer(timerInstance);
+  };
+
+  const endRound = () => {
+    clearTimeout(timer);
+    setRemainingTime(10);
+  };
+
   const enterWaitlist = () => {
     waitroomSocket.emit("join");
     setIsWaiting(true);
   };
 
-  // const joinRoom = (roomId) => {
-  //   joinChatRoom(roomId);
-  // };
-
   const joinChatRoom = (roomId) => {
-    console.log("Joining chat room");
+    console.log("Joining chat room with id", roomId);
     chatroomSocket.emit("joinRoom", roomId);
 
     setIsInRoom(true);
@@ -71,16 +103,25 @@ const CreateRoomOrJoinComponent = () => {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
               />
-
               <button onClick={enterWaitlist}>Join Room</button>
             </div>
           </div>
         )
+      ) : gameOver ? (
+        <div>
+          <h1>Game Over</h1>
+          <div>Thanks for playing!</div>
+        </div>
       ) : (
         <div>
           <div>
             <h1>Chat Room</h1>
             <div>
+              <div>
+                <h2>Round {round}</h2>
+                <div>{questions[round - 1]}</div>
+                <div>Time remaining: {remainingTime} seconds</div>
+              </div>
               {messages.map((msg, index) => (
                 <div key={index}>
                   <span>{msg.username}:</span>
